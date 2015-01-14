@@ -145,7 +145,7 @@ mrb_url_path(mrb_state *mrb, mrb_value self)
 }
 
 void
-mrb_httpsclient_gem_init(mrb_state *mrb)
+mrb_mruby_httpsclient_gem_init(mrb_state *mrb)
 {
   struct RClass *url_class;
 
@@ -159,6 +159,6 @@ mrb_httpsclient_gem_init(mrb_state *mrb)
 }
 
 void
-mrb_httpsclient_gem_final(mrb_state* mrb) {
+mrb_mruby_httpsclient_gem_final(mrb_state* mrb) {
   /* finalizer */
 }

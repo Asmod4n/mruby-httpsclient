@@ -20,55 +20,76 @@ class HttpsClient
     end
     buf = ""
     phr = Phr.new
+    rret = nil
     pret = nil
     loop do
-      @tls_client.read buf
+      rret = @tls_client.read buf
       pret = phr.parse_response(buf)
-      break if pret.is_a?(Fixnum)
-      next if pret == :incomplete
-      return pret if pret == :parser_error
+      case pret
+      when Fixnum
+        break
+      when :incomplete
+        next
+      when :parser_error
+        return pret
+      end
     end
     body = buf[pret..-1]
     headers = phr.headers.to_h
 
     if headers.key? 'Content-Length'
       cl = Integer(headers['Content-Length'])
-      offset = 0
-      loop do
-        yield body[offset..-1]
-        break if body.bytesize == cl
-        @tls_client.read body
-        offset += body.bytesize
+      yield body
+      size = body.bytesize
+      yielded = size
+      until yielded == cl
+        rret = @tls_client.read body
+        yield body[size..-1]
+        size += rret
+        yielded += size
+        if size > 1_048_576
+          body = ""
+          size = 0
+        end
       end
     elsif headers.key?('Transfer-Encoding') && headers['Transfer-Encoding'].casecmp('chunked') == 0
-      offset = 0
       decoder = Phr::ChunkedDecoder.new
       unless headers.key? 'Trailer'
         decoder.consume_trailer(true)
       end
+      offset = 0
       loop do
         case decoder.decode_chunked(body)
         when Fixnum
-          yield body[offset..-1]
+          b = body[offset..-1]
+          yield b if b.bytesize > 0
           break
         when :incomplete
-          yield body[offset..-1]
-          offset += body.bytesize
+          b = body[offset..-1]
+          yield b if b.bytesize > 0
+          offset += b.bytesize
         when :parser_error
           return :parser_error
         end
-        @tls_client.read body
+        rret = @tls_client.read body
       end
     else
       yield body
+      size = body.bytesize
+      yielded = size
       loop do
-        body = ""
-        @tls_client.read body
-        yield body
+        rret = @tls_client.read body
+        yield body[size..-1]
+        size += rret
+        yielded += size
+        if size > 1_048_576
+          body = ""
+          size = 0
+        end
       end
     end
 
     @tls_client.close
-  rescue Tls::Error
+    self
   end
 end
