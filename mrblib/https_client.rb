@@ -1,6 +1,16 @@
 Tls.init
 
 class HttpsClient
+  GET = 'GET '
+  HTTP_1_1 = ' HTTP/1.1'
+  CRLF = "\r\n"
+  HOST = 'Host: '
+  CON_KA = 'Connection: Keep-Alive'
+  CONTENT_LENGTH = 'Content-Length'
+  TRANSFER_ENCODING = 'Transfer-Encoding'
+  CHUNKED = 'chunked'
+  TRAILER = 'Trailer'
+
   def initialize(options = {})
     @tls_config = options.fetch(:tls_config) do
       Tls::Config.new
@@ -13,38 +23,36 @@ class HttpsClient
   def get(url)
     url = URL.parse(url)
     @tls_client.connect(url.host, String(url.port))
-    @tls_client.write("GET #{url.path} HTTP/1.1\r\nHost: #{url.host}\r\nConnection: Keep-Alive\r\n\r\n")
-    buf = ""
+    @tls_client.write("#{GET}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_KA}#{CRLF}#{CRLF}")
+    buf = @tls_client.read
     phr = Phr.new
     pret = nil
     loop do
-      buf << @tls_client.read
       pret = phr.parse_response(buf)
       case pret
       when Fixnum
         break
-      when :incomplete
-        next
       when :parser_error
         @tls_client.close
         return pret
       end
+      buf << @tls_client.read
     end
     body = buf[pret..-1]
     headers = phr.headers.to_h
 
-    if headers.key? 'Content-Length'
-      cl = Integer(headers['Content-Length'])
+    if headers.key? CONTENT_LENGTH
+      cl = Integer(headers[CONTENT_LENGTH])
       yield body
       yielded = body.bytesize
       until yielded == cl
-        body = @tls_client.read(1_048_576)
+        body = @tls_client.read(65_536)
         yield body
         yielded += body.bytesize
       end
-    elsif headers.key?('Transfer-Encoding') && headers['Transfer-Encoding'].casecmp('chunked') == 0
+    elsif headers.key?(TRANSFER_ENCODING) && headers[TRANSFER_ENCODING].casecmp(CHUNKED) == 0
       decoder = Phr::ChunkedDecoder.new
-      unless headers.key? 'Trailer'
+      unless headers.key? TRAILER
         decoder.consume_trailer(true)
       end
       loop do
@@ -58,12 +66,12 @@ class HttpsClient
           @tls_client.close
           return pret
         end
-        body = @tls_client.read(1_048_576)
+        body = @tls_client.read(65_536)
       end
     else
       yield body
       loop do
-        yield @tls_client.read(1_048_576)
+        yield @tls_client.read(65_536)
       end
     end
 
