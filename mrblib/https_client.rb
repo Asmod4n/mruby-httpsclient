@@ -13,17 +13,12 @@ class HttpsClient
   def get(url)
     url = URL.parse(url)
     @tls_client.connect(url.host, String(url.port))
-    request = "GET #{url.path} HTTP/1.1\r\nHost: #{url.host}\r\nConnection: Keep-Alive\r\n\r\n"
-    written = @tls_client.write(request)
-    until written == request.bytesize
-      written += @tls_client.write(request)
-    end
+    @tls_client.write("GET #{url.path} HTTP/1.1\r\nHost: #{url.host}\r\nConnection: Keep-Alive\r\n\r\n")
     buf = ""
     phr = Phr.new
-    rret = nil
     pret = nil
     loop do
-      rret = @tls_client.read buf
+      buf << @tls_client.read
       pret = phr.parse_response(buf)
       case pret
       when Fixnum
@@ -31,6 +26,7 @@ class HttpsClient
       when :incomplete
         next
       when :parser_error
+        @tls_client.close
         return pret
       end
     end
@@ -43,9 +39,10 @@ class HttpsClient
       size = body.bytesize
       yielded = size
       until yielded == cl
-        rret = @tls_client.read body
-        yield body[size..-1]
-        size += rret
+        body << @tls_client.read
+        b = body[size..-1]
+        yield b
+        size += b.bytesize
         yielded += size
         if size > 1_048_576
           body = ""
@@ -69,18 +66,20 @@ class HttpsClient
           yield b if b.bytesize > 0
           offset += b.bytesize
         when :parser_error
+          @tls_client.close
           return :parser_error
         end
-        rret = @tls_client.read body
+        body << @tls_client.read
       end
     else
       yield body
       size = body.bytesize
       yielded = size
       loop do
-        rret = @tls_client.read body
-        yield body[size..-1]
-        size += rret
+        body << @tls_client.read
+        b = body[size..-1]
+        yield b
+        size += b.bytesize
         yielded += size
         if size > 1_048_576
           body = ""
