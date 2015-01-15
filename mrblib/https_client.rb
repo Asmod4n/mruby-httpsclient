@@ -44,7 +44,7 @@ class HttpsClient
         yield b
         size += b.bytesize
         yielded += size
-        if size > 1_048_576
+        if size >= 1_048_576
           body = ""
           size = 0
         end
@@ -54,20 +54,25 @@ class HttpsClient
       unless headers.key? 'Trailer'
         decoder.consume_trailer(true)
       end
-      offset = 0
+      yielded = 0
+      size = 0
       loop do
-        case decoder.decode_chunked(body)
+        pret = decoder.decode_chunked(body[size..-1]) do |body|
+          yield body
+        end
+        case pret
         when Fixnum
-          b = body[offset..-1]
-          yield b if b.bytesize > 0
           break
         when :incomplete
-          b = body[offset..-1]
-          yield b if b.bytesize > 0
-          offset += b.bytesize
+          size += body.bytesize
+          yielded += size
+          if size >= 1_048_576
+            body = ""
+            size = 0
+          end
         when :parser_error
           @tls_client.close
-          return :parser_error
+          return pret
         end
         body << @tls_client.read
       end
@@ -81,7 +86,7 @@ class HttpsClient
         yield b
         size += b.bytesize
         yielded += size
-        if size > 1_048_576
+        if size >= 1_048_576
           body = ""
           size = 0
         end
