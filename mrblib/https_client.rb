@@ -36,60 +36,34 @@ class HttpsClient
     if headers.key? 'Content-Length'
       cl = Integer(headers['Content-Length'])
       yield body
-      size = body.bytesize
-      yielded = size
+      yielded = body.bytesize
       until yielded == cl
-        body << @tls_client.read
-        b = body[size..-1]
-        yield b
-        size += b.bytesize
-        yielded += size
-        if size >= 1_048_576
-          body = ""
-          size = 0
-        end
+        body = @tls_client.read(1_048_576)
+        yield body
+        yielded += body.bytesize
       end
     elsif headers.key?('Transfer-Encoding') && headers['Transfer-Encoding'].casecmp('chunked') == 0
       decoder = Phr::ChunkedDecoder.new
       unless headers.key? 'Trailer'
         decoder.consume_trailer(true)
       end
-      yielded = 0
-      size = 0
       loop do
-        pret = decoder.decode_chunked(body[size..-1]) do |body|
+        pret = decoder.decode_chunked(body) do |body|
           yield body
         end
         case pret
         when Fixnum
           break
-        when :incomplete
-          size += body.bytesize
-          yielded += size
-          if size >= 1_048_576
-            body = ""
-            size = 0
-          end
         when :parser_error
           @tls_client.close
           return pret
         end
-        body << @tls_client.read
+        body = @tls_client.read(1_048_576)
       end
     else
       yield body
-      size = body.bytesize
-      yielded = size
       loop do
-        body << @tls_client.read
-        b = body[size..-1]
-        yield b
-        size += b.bytesize
-        yielded += size
-        if size >= 1_048_576
-          body = ""
-          size = 0
-        end
+        yield @tls_client.read(1_048_576)
       end
     end
 
