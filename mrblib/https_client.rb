@@ -6,10 +6,10 @@ class HttpsClient
   CRLF = "\r\n"
   HOST = 'Host: '
   CON_KA = 'Connection: Keep-Alive'
-  CONTENT_LENGTH = 'Content-Length'
-  TRANSFER_ENCODING = 'Transfer-Encoding'
+  CONTENT_LENGTH = 'content-length'
+  TRANSFER_ENCODING = 'transfer-encoding'
   CHUNKED = 'chunked'
-  TRAILER = 'Trailer'
+  TRAILER = 'trailer'
 
   def initialize(options = {})
     @tls_config = options.fetch(:tls_config) do
@@ -20,10 +20,22 @@ class HttpsClient
     end
   end
 
-  def get(url)
+  def get(url, headers = nil)
     url = URL.parse(url)
+    unless url.is_a? URL
+      return :malformed_url
+    end
     @tls_client.connect(url.host, String(url.port))
-    @tls_client.write("#{GET}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_KA}#{CRLF}#{CRLF}")
+    if headers
+      buf = "#{GET}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_KA}#{CRLF}"
+      headers.each do |kv|
+        buf << "#{kv[0]}: #{kv[1]}#{CRLF}"
+      end
+      buf << CRLF
+      @tls_client.write buf
+    else
+      @tls_client.write("#{GET}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_KA}#{CRLF}#{CRLF}")
+    end
     buf = @tls_client.read
     phr = Phr.new
     pret = nil

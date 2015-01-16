@@ -173,7 +173,7 @@ mrb_mruby_httpsclient_gem_init(mrb_state *mrb)
 
   url_class = mrb_define_class(mrb, "URL", mrb->object_class);
 
-  mrb_define_class_method(mrb, url_class, "parse", mrb_url_parse,MRB_ARGS_REQ(1));
+  mrb_define_class_method(mrb, url_class, "parse", mrb_url_parse, MRB_ARGS_REQ(1));
   mrb_define_method(mrb, url_class, "scheme", mrb_url_scheme, MRB_ARGS_NONE());
   mrb_define_method(mrb, url_class, "host", mrb_url_host, MRB_ARGS_NONE());
   mrb_define_method(mrb, url_class, "port", mrb_url_port, MRB_ARGS_NONE());
