@@ -10,6 +10,7 @@ class HttpsClient
   TRANSFER_ENCODING = 'transfer-encoding'
   CHUNKED = 'chunked'
   TRAILER = 'trailer'
+  HEAD = 'HEAD '
 
   def initialize(options = {})
     @tls_config = options.fetch(:tls_config) do
@@ -23,19 +24,20 @@ class HttpsClient
   def get(url, headers = nil)
     url = URL.parse(url)
     unless url.is_a? URL
-      return :malformed_url
+      return url
     end
-    @tls_client.connect(url.host, String(url.port))
+    buf = nil
     if headers
       buf = "#{GET}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_KA}#{CRLF}"
       headers.each do |kv|
         buf << "#{kv[0]}: #{kv[1]}#{CRLF}"
       end
       buf << CRLF
-      @tls_client.write buf
     else
-      @tls_client.write("#{GET}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_KA}#{CRLF}#{CRLF}")
+      buf = "#{GET}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_KA}#{CRLF}#{CRLF}"
     end
+    @tls_client.connect(url.host, String(url.port))
+    @tls_client.write(buf)
     buf = @tls_client.read
     phr = Phr.new
     pret = nil
@@ -89,5 +91,40 @@ class HttpsClient
 
     @tls_client.close
     self
+  end
+
+  def head(url, headers = nil)
+    url = URL.parse(url)
+    unless url.is_a? URL
+      return url
+    end
+    buf = nil
+    if headers
+      buf = "#{HEAD}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_KA}#{CRLF}"
+      headers.each do |kv|
+        buf << "#{kv[0]}: #{kv[1]}#{CRLF}"
+      end
+      buf << CRLF
+    else
+      buf = "#{HEAD}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_KA}#{CRLF}#{CRLF}"
+    end
+    @tls_client.connect(url.host, String(url.port))
+    @tls_client.write(buf)
+    buf = @tls_client.read
+    phr = Phr.new
+    loop do
+      pret = phr.parse_response(buf)
+      case pret
+      when Fixnum
+        break
+      when :parser_error
+        @tls_client.close
+        return pret
+      end
+      buf << @tls_client.read
+    end
+
+    @tls_client.close
+    phr.headers
   end
 end
