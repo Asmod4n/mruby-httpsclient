@@ -83,7 +83,6 @@ class HttpsClient
       end
       loop do
         pret = decoder.decode_chunked(response.body) do |body|
-          response.body = body
           yield response
         end
         case pret
@@ -166,7 +165,7 @@ class HttpsClient
       @tls_client.connect(url.host, String(url.port))
       @tls_client.write(buf)
       @tls_client.write(body)
-    when Array
+    when Enumerable
       buf << "#{TRANSFER_ENCODING}#{KV_DELI}#{CHUNKED}#{CRLF}#{CRLF}"
       @tls_client.connect(url.host, String(url.port))
       @tls_client.write(buf)
@@ -227,7 +226,6 @@ class HttpsClient
       end
       loop do
         pret = decoder.decode_chunked(response.body) do |body|
-          response.body = body
           yield response
         end
         case pret
