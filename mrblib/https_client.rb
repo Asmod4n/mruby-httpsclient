@@ -29,9 +29,6 @@ class HttpsClient
 
   def get(url, headers = nil)
     url = URL.parse(url)
-    unless url.is_a? URL
-      return url
-    end
     buf = nil
     if headers
       buf = "#{GET}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_KA}#{CRLF}"
@@ -42,7 +39,7 @@ class HttpsClient
     else
       buf = "#{GET}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_KA}#{CRLF}#{CRLF}"
     end
-    @tls_client.connect(url.host, String(url.port))
+    @tls_client.connect(url.host, url.port)
     @tls_client.write(buf)
     buf = @tls_client.read
     phr = Phr.new
@@ -72,7 +69,7 @@ class HttpsClient
       yield response
       yielded = response.body.bytesize
       until yielded == cl
-        response.body = @tls_client.read(65_536)
+        response.body = @tls_client.read(32_768)
         yield response
         yielded += response.body.bytesize
       end
@@ -89,7 +86,7 @@ class HttpsClient
         when Fixnum
           break
         when :incomplete
-          response.body = @tls_client.read(65_536)
+          response.body = @tls_client.read(32_768)
         when :parser_error
           @tls_client.close
           return pret
@@ -98,20 +95,19 @@ class HttpsClient
     else
       yield response
       loop do
-        response.body = @tls_client.read(65_536)
+        response.body = @tls_client.read(32_768)
         yield response
       end
     end
 
     @tls_client.close
     self
+  rescue Tls::Error
+    @tls_client.close
   end
 
   def head(url, headers = nil)
     url = URL.parse(url)
-    unless url.is_a? URL
-      return url
-    end
     buf = nil
     if headers
       buf = "#{HEAD}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_KA}#{CRLF}"
@@ -122,7 +118,7 @@ class HttpsClient
     else
       buf = "#{HEAD}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_KA}#{CRLF}#{CRLF}"
     end
-    @tls_client.connect(url.host, String(url.port))
+    @tls_client.connect(url.host, url.port)
     @tls_client.write(buf)
     buf = @tls_client.read
     phr = Phr.new
@@ -143,14 +139,12 @@ class HttpsClient
 
     @tls_client.close
     self
+  rescue Tls::Error
+    @tls_client.close
   end
 
   def post(url, body, headers = nil)
     url = URL.parse(url)
-    unless url.is_a? URL
-      return url
-    end
-
     buf = nil
     if headers
       buf = "#{POST}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_KA}#{CRLF}"
@@ -164,12 +158,12 @@ class HttpsClient
     case body
     when String
       buf << "#{CONTENT_LENGTH}#{KV_DELI}#{body.bytesize}#{CRLF}#{CRLF}"
-      @tls_client.connect(url.host, String(url.port))
+      @tls_client.connect(url.host, url.port)
       @tls_client.write(buf)
       @tls_client.write(body)
     when Enumerable
       buf << "#{TRANSFER_ENCODING}#{KV_DELI}#{CHUNKED}#{CRLF}#{CRLF}"
-      @tls_client.connect(url.host, String(url.port))
+      @tls_client.connect(url.host, url.port)
       @tls_client.write(buf)
       body.each do |chunk|
         ch = String(chunk)
@@ -179,7 +173,7 @@ class HttpsClient
       @tls_client.write(FINAL_CHUNK)
     when Fiber
       buf << "#{TRANSFER_ENCODING}#{KV_DELI}#{CHUNKED}#{CRLF}#{CRLF}"
-      @tls_client.connect(url.host, String(url.port))
+      @tls_client.connect(url.host, url.port)
       @tls_client.write(buf)
       while body.alive? && chunk = body.resume
         ch = String(chunk)
@@ -218,7 +212,7 @@ class HttpsClient
       yield response
       yielded = response.body.bytesize
       until yielded == cl
-        response.body = @tls_client.read(65_536)
+        response.body = @tls_client.read(32_768)
         yield response
         yielded += response.body.bytesize
       end
@@ -235,7 +229,7 @@ class HttpsClient
         when Fixnum
           break
         when :incomplete
-          response.body = @tls_client.read(65_536)
+          response.body = @tls_client.read(32_768)
         when :parser_error
           @tls_client.close
           return pret
@@ -244,12 +238,14 @@ class HttpsClient
     else
       yield response
       loop do
-        response.body = @tls_client.read(65_536)
+        response.body = @tls_client.read(32_768)
         yield response
       end
     end
 
     @tls_client.close
     self
+  rescue Tls::Error
+    @tls_client.close
   end
 end
