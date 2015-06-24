@@ -20,17 +20,17 @@ class URL
       instance.instance_variable_set(:@port, HTTPS_PORT)
       cur_pos += HTTPS_SCHEME.bytesize
     else
-      raise "Not a https URL"
+      raise ArgumentError, "Not a https URL"
     end
 
     if cur_pos == url_len
-      raise "Host missing"
+      raise ArgumentError, "Host missing"
     end
 
     if url[cur_pos] == BRACKET_OPEN
       cur_pos += 1
       if ((idx = url.index(BRACKET_CLOSE, cur_pos)) == nil)
-        raise "Invalid IPv6 Address"
+        raise ArgumentError, "Invalid IPv6 Address"
       else
         instance.instance_variable_set(:@host, url[cur_pos, idx - cur_pos])
         cur_pos = idx + 1
@@ -57,7 +57,7 @@ class URL
       if((idx = url.index(SLASH, cur_pos)) == nil)
         port = url[cur_pos, url_len - cur_pos]
         if Integer(port) >= 65536
-          raise "Port too large"
+          raise ArgumentError, "Port too large"
         end
         instance.instance_variable_set(:@port, port)
         instance.instance_variable_set(:@path, SLASH)
@@ -65,7 +65,7 @@ class URL
       else
         port = url[cur_pos, idx - cur_pos]
         if Integer(port) >= 65536
-          raise "Port too large"
+          raise ArgumentError, "Port too large"
         end
         instance.instance_variable_set(:@port, port)
         cur_pos = idx

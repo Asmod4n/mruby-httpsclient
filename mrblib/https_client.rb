@@ -19,12 +19,14 @@ class HttpsClient
   Response = Struct.new(:minor_version, :status, :msg, :headers, :body)
 
   def initialize(options = {})
-    @tls_config = options.fetch(:tls_config) do
+    tls_config = options.fetch(:tls_config) do
       Tls::Config.new
     end
     @tls_client = options.fetch(:tls_client) do
-      Tls::Client.new @tls_config
+      Tls::Client.new tls_config
     end
+    @phr = Phr.new
+    @decoder = Phr::ChunkedDecoder.new
   end
 
   def get(url, headers = nil)
@@ -42,26 +44,24 @@ class HttpsClient
     @tls_client.connect(url.host, url.port)
     @tls_client.write(buf)
     buf = @tls_client.read
-    phr = Phr.new
     pret = nil
     response = nil
     loop do
-      pret = phr.parse_response(buf)
+      pret = @phr.parse_response(buf)
       case pret
       when Fixnum
-        response = Response.new(phr.minor_version,
-          phr.status, phr.msg, phr.headers)
+        response = Response.new(@phr.minor_version,
+          @phr.status, @phr.msg, @phr.headers)
         yield response
         break
       when :incomplete
         buf << @tls_client.read
       when :parser_error
-        @tls_client.close
         return pret
       end
     end
     response.body = String(buf[pret..-1])
-    headers = phr.headers.to_h
+    headers = @phr.headers.to_h
 
     if headers.key? CONTENT_LENGTH_DC
       cl = Integer(headers[CONTENT_LENGTH_DC])
@@ -74,12 +74,11 @@ class HttpsClient
         yielded += response.body.bytesize
       end
     elsif headers.key?(TRANSFER_ENCODING_DC) && headers[TRANSFER_ENCODING_DC].casecmp(CHUNKED) == 0
-      decoder = Phr::ChunkedDecoder.new
       unless headers.key? TRAILER_DC
-        decoder.consume_trailer(true)
+        @decoder.consume_trailer(true)
       end
       loop do
-        pret = decoder.decode_chunked(response.body) do |body|
+        pret = @decoder.decode_chunked(response.body) do |body|
           yield response
         end
         case pret
@@ -88,7 +87,6 @@ class HttpsClient
         when :incomplete
           response.body = @tls_client.read(32_768)
         when :parser_error
-          @tls_client.close
           return pret
         end
       end
@@ -100,10 +98,14 @@ class HttpsClient
       end
     end
 
-    @tls_client.close
     self
-  rescue Tls::Error
-    @tls_client.close
+  ensure
+    begin
+      @phr.reset
+      @decoder.reset
+      @tls_client.close
+    rescue
+    end
   end
 
   def head(url, headers = nil)
@@ -121,26 +123,28 @@ class HttpsClient
     @tls_client.connect(url.host, url.port)
     @tls_client.write(buf)
     buf = @tls_client.read
-    phr = Phr.new
     loop do
-      pret = phr.parse_response(buf)
+      pret = @phr.parse_response(buf)
       case pret
       when Fixnum
-        yield Response.new(phr.minor_version,
-          phr.status, phr.msg, phr.headers)
+        yield Response.new(@phr.minor_version,
+          @phr.status, @phr.msg, @phr.headers)
         break
       when :incomplete
         buf << @tls_client.read
       when :parser_error
-        @tls_client.close
         return pret
       end
     end
 
-    @tls_client.close
     self
-  rescue Tls::Error
-    @tls_client.close
+  ensure
+    begin
+      @phr.reset
+      @decoder.reset
+      @tls_client.close
+    rescue
+    end
   end
 
   def post(url, body, headers = nil)
@@ -186,26 +190,24 @@ class HttpsClient
     end
 
     buf = @tls_client.read
-    phr = Phr.new
     pret = nil
     response = nil
     loop do
-      pret = phr.parse_response(buf)
+      pret = @phr.parse_response(buf)
       case pret
       when Fixnum
-        response = Response.new(phr.minor_version,
-          phr.status, phr.msg, phr.headers)
+        response = Response.new(@phr.minor_version,
+          @phr.status, @phr.msg, @phr.headers)
         yield response
         break
       when :incomplete
         buf << @tls_client.read
       when :parser_error
-        @tls_client.close
         return pret
       end
     end
     response.body = String(buf[pret..-1])
-    headers = phr.headers.to_h
+    headers = @phr.headers.to_h
 
     if headers.key? CONTENT_LENGTH_DC
       cl = Integer(headers[CONTENT_LENGTH_DC])
@@ -217,12 +219,11 @@ class HttpsClient
         yielded += response.body.bytesize
       end
     elsif headers.key?(TRANSFER_ENCODING_DC) && headers[TRANSFER_ENCODING_DC].casecmp(CHUNKED) == 0
-      decoder = Phr::ChunkedDecoder.new
       unless headers.key? TRAILER_DC
-        decoder.consume_trailer(true)
+        @decoder.consume_trailer(true)
       end
       loop do
-        pret = decoder.decode_chunked(response.body) do |body|
+        pret = @decoder.decode_chunked(response.body) do |body|
           yield response
         end
         case pret
@@ -231,7 +232,6 @@ class HttpsClient
         when :incomplete
           response.body = @tls_client.read(32_768)
         when :parser_error
-          @tls_client.close
           return pret
         end
       end
@@ -243,9 +243,13 @@ class HttpsClient
       end
     end
 
-    @tls_client.close
     self
-  rescue Tls::Error
-    @tls_client.close
+  ensure
+    begin
+      @phr.reset
+      @decoder.reset
+      @tls_client.close
+    rescue
+    end
   end
 end
