@@ -19,11 +19,11 @@ class HttpsClient
   Response = Struct.new(:minor_version, :status, :msg, :headers, :body)
 
   def initialize(options = {})
-    tls_config = options.fetch(:tls_config) do
+    @tls_config = options.fetch(:tls_config) do
       Tls::Config.new
     end
     @tls_client = options.fetch(:tls_client) do
-      Tls::Client.new tls_config
+      Tls::Client.new @tls_config
     end
     @phr = Phr.new
     @decoder = Phr::ChunkedDecoder.new
@@ -75,7 +75,7 @@ class HttpsClient
       end
     elsif headers.key?(TRANSFER_ENCODING_DC) && headers[TRANSFER_ENCODING_DC].casecmp(CHUNKED) == 0
       unless headers.key? TRAILER_DC
-        @decoder.consume_trailer(true)
+        @decoder.consume_trailer = true
       end
       loop do
         pret = @decoder.decode_chunked(response.body)
