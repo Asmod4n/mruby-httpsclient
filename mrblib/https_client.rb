@@ -78,13 +78,13 @@ class HttpsClient
         @decoder.consume_trailer(true)
       end
       loop do
-        pret = @decoder.decode_chunked(response.body) do |body|
-          yield response
-        end
+        pret = @decoder.decode_chunked(response.body)
         case pret
         when Fixnum
+          yield response
           break
         when :incomplete
+          yield response
           response.body = @tls_client.read(32_768)
         when :parser_error
           return pret
