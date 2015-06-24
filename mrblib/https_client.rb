@@ -3,7 +3,7 @@ class HttpsClient
   HTTP_1_1 = ' HTTP/1.1'
   CRLF = "\r\n"
   HOST = 'Host: '
-  CON_KA = 'Connection: Keep-Alive'
+  CON_CL = 'Connection: close'
   KV_DELI = ': '
   CONTENT_LENGTH = 'Content-Length'
   CONTENT_LENGTH_DC = CONTENT_LENGTH.downcase
@@ -33,13 +33,13 @@ class HttpsClient
     url = URL.parse(url)
     buf = nil
     if headers
-      buf = "#{GET}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_KA}#{CRLF}"
+      buf = "#{GET}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_CL}#{CRLF}"
       headers.each do |kv|
         buf << "#{kv[0]}#{KV_DELI}#{kv[1]}#{CRLF}"
       end
       buf << CRLF
     else
-      buf = "#{GET}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_KA}#{CRLF}#{CRLF}"
+      buf = "#{GET}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_CL}#{CRLF}#{CRLF}"
     end
     @tls_client.connect(url.host, url.port)
     @tls_client.write(buf)
@@ -112,13 +112,13 @@ class HttpsClient
     url = URL.parse(url)
     buf = nil
     if headers
-      buf = "#{HEAD}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_KA}#{CRLF}"
+      buf = "#{HEAD}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_CL}#{CRLF}"
       headers.each do |kv|
         buf << "#{kv[0]}#{KV_DELI}#{kv[1]}#{CRLF}"
       end
       buf << CRLF
     else
-      buf = "#{HEAD}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_KA}#{CRLF}#{CRLF}"
+      buf = "#{HEAD}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_CL}#{CRLF}#{CRLF}"
     end
     @tls_client.connect(url.host, url.port)
     @tls_client.write(buf)
@@ -151,12 +151,12 @@ class HttpsClient
     url = URL.parse(url)
     buf = nil
     if headers
-      buf = "#{POST}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_KA}#{CRLF}"
+      buf = "#{POST}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_CL}#{CRLF}"
       headers.each do |kv|
         buf << "#{kv[0]}#{KV_DELI}#{kv[1]}#{CRLF}"
       end
     else
-      buf = "#{POST}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_KA}#{CRLF}"
+      buf = "#{POST}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_CL}#{CRLF}"
     end
 
     case body
