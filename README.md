@@ -1,11 +1,11 @@
-# mruby-httpsclient
+﻿# mruby-httpsclient
 
 Example
 ======
 
 ```ruby
 client = HttpsClient.new
-client.get("https://www.google.com/") do |response|
+client.get("https://github.com/") do |response|
   puts response.minor_version
   puts response.status
   puts response.msg
