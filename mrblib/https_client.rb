@@ -26,7 +26,6 @@ class HttpsClient
       Tls::Client.new @tls_config
     end
     @phr = Phr.new
-    @decoder = Phr::ChunkedDecoder.new
   end
 
   def get(url, headers = nil)
@@ -75,10 +74,10 @@ class HttpsClient
       end
     elsif headers.key?(TRANSFER_ENCODING_DC) && headers[TRANSFER_ENCODING_DC].casecmp(CHUNKED) == 0
       unless headers.key? TRAILER_DC
-        @decoder.consume_trailer = true
+        @phr.consume_trailer = true
       end
       loop do
-        pret = @decoder.decode_chunked(response.body)
+        pret = @phr.decode_chunked(response.body)
         case pret
         when Fixnum
           yield response
@@ -102,7 +101,6 @@ class HttpsClient
   ensure
     begin
       @phr.reset
-      @decoder.reset
       @tls_client.close
     rescue
     end
@@ -141,7 +139,6 @@ class HttpsClient
   ensure
     begin
       @phr.reset
-      @decoder.reset
       @tls_client.close
     rescue
     end
@@ -220,10 +217,10 @@ class HttpsClient
       end
     elsif headers.key?(TRANSFER_ENCODING_DC) && headers[TRANSFER_ENCODING_DC].casecmp(CHUNKED) == 0
       unless headers.key? TRAILER_DC
-        @decoder.consume_trailer = true
+        @phr.consume_trailer = true
       end
       loop do
-        pret = @decoder.decode_chunked(response.body)
+        pret = @phr.decode_chunked(response.body)
         case pret
         when Fixnum
           yield response
@@ -247,7 +244,6 @@ class HttpsClient
   ensure
     begin
       @phr.reset
-      @decoder.reset
       @tls_client.close
     rescue
     end
