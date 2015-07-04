@@ -16,4 +16,4 @@ HttpsClient.new.get("https://github.com/") do |response|
 end
 ```
 
-The response body is always streamed, if you need to work with the complete body at once you have to stitch is together.
+The response body is always streamed, if you need to work with the complete body at once you have to stitch it together.
