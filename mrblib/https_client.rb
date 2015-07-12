@@ -32,7 +32,7 @@ class HttpsClient
     url = URL.parse(url)
     buf = nil
     if headers
-      buf = "#{GET}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_CL}#{CRLF}"
+      buf = "#{GET}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}"
       headers.each do |kv|
         buf << "#{kv[0]}#{KV_DELI}#{kv[1]}#{CRLF}"
       end
@@ -110,7 +110,7 @@ class HttpsClient
     url = URL.parse(url)
     buf = nil
     if headers
-      buf = "#{HEAD}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_CL}#{CRLF}"
+      buf = "#{HEAD}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}"
       headers.each do |kv|
         buf << "#{kv[0]}#{KV_DELI}#{kv[1]}#{CRLF}"
       end
@@ -148,7 +148,7 @@ class HttpsClient
     url = URL.parse(url)
     buf = nil
     if headers
-      buf = "#{POST}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_CL}#{CRLF}"
+      buf = "#{POST}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}"
       headers.each do |kv|
         buf << "#{kv[0]}#{KV_DELI}#{kv[1]}#{CRLF}"
       end
