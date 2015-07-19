@@ -10,6 +10,12 @@ You need mruby-tls which needs libressl somewhere your compiler can find it, for
   end
 ```
 
+You also need mruby-phr:
+build_config.rb
+```ruby
+  conf.gem github: 'Asmod4n/mruby-phr'
+```
+
 Example
 ======
 
