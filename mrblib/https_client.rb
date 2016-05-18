@@ -158,35 +158,10 @@ class HttpsClient
       buf = "#{POST}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_CL}#{CRLF}"
     end
 
-    case body
-    when String
-      buf << "#{CONTENT_LENGTH}#{KV_DELI}#{body.bytesize}#{CRLF}#{CRLF}"
-      @tls_client.connect(url.host, url.port)
-      @tls_client.write(buf)
-      @tls_client.write(body)
-    when Enumerable
-      buf << "#{TRANSFER_ENCODING}#{KV_DELI}#{CHUNKED}#{CRLF}#{CRLF}"
-      @tls_client.connect(url.host, url.port)
-      @tls_client.write(buf)
-      body.each do |chunk|
-        ch = String(chunk)
-        next if ch.bytesize == 0
-        @tls_client.write("#{ch.bytesize.to_s(16)}#{CRLF}#{ch}#{CRLF}")
-      end
-      @tls_client.write(FINAL_CHUNK)
-    when Fiber
-      buf << "#{TRANSFER_ENCODING}#{KV_DELI}#{CHUNKED}#{CRLF}#{CRLF}"
-      @tls_client.connect(url.host, url.port)
-      @tls_client.write(buf)
-      while body.alive? && chunk = body.resume
-        ch = String(chunk)
-        next if ch.bytesize == 0
-        @tls_client.write("#{ch.bytesize.to_s(16)}#{CRLF}#{ch}#{CRLF}")
-      end
-      @tls_client.write(FINAL_CHUNK)
-    else
-      raise ArgumentError, "Cannot handle #{body.class}"
-    end
+    @tls_client.connect(url.host, url.port)
+    @tls_client.write(buf)
+
+    send_body(body)
 
     buf = @tls_client.read
     pret = nil
@@ -253,6 +228,35 @@ class HttpsClient
         response.body = @tls_client.read(32_768)
         yield response
       end
+    end
+  end
+
+  def send_body(body)
+    case body
+    when String
+      buf = "#{CONTENT_LENGTH}#{KV_DELI}#{body.bytesize}#{CRLF}#{CRLF}"
+      @tls_client.write(buf)
+      @tls_client.write(body)
+    when Enumerable
+      buf = "#{TRANSFER_ENCODING}#{KV_DELI}#{CHUNKED}#{CRLF}#{CRLF}"
+      @tls_client.write(buf)
+      body.each do |chunk|
+        ch = String(chunk)
+        next if ch.bytesize == 0
+        @tls_client.write("#{ch.bytesize.to_s(16)}#{CRLF}#{ch}#{CRLF}")
+      end
+      @tls_client.write(FINAL_CHUNK)
+    when Fiber
+      buf = "#{TRANSFER_ENCODING}#{KV_DELI}#{CHUNKED}#{CRLF}#{CRLF}"
+      @tls_client.write(buf)
+      while body.alive? && chunk = body.resume
+        ch = String(chunk)
+        next if ch.bytesize == 0
+        @tls_client.write("#{ch.bytesize.to_s(16)}#{CRLF}#{ch}#{CRLF}")
+      end
+      @tls_client.write(FINAL_CHUNK)
+    else
+      raise ArgumentError, "Cannot handle #{body.class}"
     end
   end
 end
