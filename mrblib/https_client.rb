@@ -97,6 +97,8 @@ class HttpsClient
       end
     end
 
+    read_body(response, pret, buf, &block)
+
     self
   ensure
     begin
@@ -203,6 +205,19 @@ class HttpsClient
         return pret
       end
     end
+
+    read_body(response, pret, buf, &block)
+
+    self
+  ensure
+    begin
+      @phr.reset
+      @tls_client.close
+    rescue
+    end
+  end
+
+  def read_body(response, pret, buf)
     response.body = String(buf[pret..-1])
     headers = @phr.headers.to_h
 
@@ -238,14 +253,6 @@ class HttpsClient
         response.body = @tls_client.read(32_768)
         yield response
       end
-    end
-
-    self
-  ensure
-    begin
-      @phr.reset
-      @tls_client.close
-    rescue
     end
   end
 end
