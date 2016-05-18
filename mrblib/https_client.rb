@@ -101,11 +101,7 @@ class HttpsClient
 
     self
   ensure
-    begin
-      @phr.reset
-      @tls_client.close
-    rescue
-    end
+    cleanup
   end
 
   def head(url, headers = nil)
@@ -139,11 +135,7 @@ class HttpsClient
 
     self
   ensure
-    begin
-      @phr.reset
-      @tls_client.close
-    rescue
-    end
+    cleanup
   end
 
   def post(url, body, headers = nil)
@@ -185,11 +177,13 @@ class HttpsClient
 
     self
   ensure
-    begin
-      @phr.reset
-      @tls_client.close
-    rescue
-    end
+    cleanup
+  end
+
+  def cleanup
+    @phr.reset
+    @tls_client.close
+  rescue
   end
 
   def read_body(response, pret, buf)
