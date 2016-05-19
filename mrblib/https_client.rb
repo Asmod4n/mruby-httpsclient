@@ -70,7 +70,11 @@ class HttpsClient
     @tls_client.connect(url.host, url.port)
     @tls_client.write(buf)
 
-    send_body(body) if request_body
+    if request_body then
+      send_body(body)
+    else
+      @tls_client.write CRLF
+    end
 
     response, pret, buf = read_response(&block)
 
