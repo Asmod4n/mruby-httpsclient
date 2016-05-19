@@ -29,17 +29,9 @@ class HttpsClient
   end
 
   def get(url, headers = nil)
-    url = URL.parse(url)
-    buf = nil
-    if headers
-      buf = "#{GET}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}"
-      headers.each do |kv|
-        buf << "#{kv[0]}#{KV_DELI}#{kv[1]}#{CRLF}"
-      end
-      buf << CRLF
-    else
-      buf = "#{GET}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_CL}#{CRLF}#{CRLF}"
-    end
+    buf = make_request(GET, url, headers)
+    buf << CRLF
+
     @tls_client.connect(url.host, url.port)
     @tls_client.write(buf)
     buf = @tls_client.read
@@ -105,17 +97,9 @@ class HttpsClient
   end
 
   def head(url, headers = nil)
-    url = URL.parse(url)
-    buf = nil
-    if headers
-      buf = "#{HEAD}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}"
-      headers.each do |kv|
-        buf << "#{kv[0]}#{KV_DELI}#{kv[1]}#{CRLF}"
-      end
-      buf << CRLF
-    else
-      buf = "#{HEAD}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_CL}#{CRLF}#{CRLF}"
-    end
+    buf = make_request(HEAD, url, headers)u
+    buf << CRLF
+
     @tls_client.connect(url.host, url.port)
     @tls_client.write(buf)
     buf = @tls_client.read
@@ -139,16 +123,7 @@ class HttpsClient
   end
 
   def post(url, body, headers = nil)
-    url = URL.parse(url)
-    buf = nil
-    if headers
-      buf = "#{POST}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}"
-      headers.each do |kv|
-        buf << "#{kv[0]}#{KV_DELI}#{kv[1]}#{CRLF}"
-      end
-    else
-      buf = "#{POST}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{CON_CL}#{CRLF}"
-    end
+    buf = make_request(POST, url, headers)
 
     @tls_client.connect(url.host, url.port)
     @tls_client.write(buf)
@@ -252,5 +227,21 @@ class HttpsClient
     else
       raise ArgumentError, "Cannot handle #{body.class}"
     end
+  end
+
+  def make_request(method, url, headers)
+    url = URL.parse(url)
+
+    buf = "#{method}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}"
+
+    if headers
+      headers.each do |kv|
+        buf << "#{kv[0]}#{KV_DELI}#{kv[1]}#{CRLF}"
+      end
+    else
+      buf << "#{CON_CL}#{CRLF}"
+    end
+
+    buf
   end
 end
