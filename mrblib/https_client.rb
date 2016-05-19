@@ -1,5 +1,4 @@
 class HttpsClient
-  GET = 'GET '
   HTTP_1_1 = ' HTTP/1.1'
   CRLF = "\r\n"
   HOST = 'Host: '
@@ -12,9 +11,11 @@ class HttpsClient
   CHUNKED = 'chunked'
   TRAILER = 'Trailer'
   TRAILER_DC = TRAILER.downcase
+  FINAL_CHUNK = "0#{CRLF}#{CRLF}"
+
+  GET  = 'GET '
   HEAD = 'HEAD '
   POST = 'POST '
-  FINAL_CHUNK = "0#{CRLF}#{CRLF}"
 
   Response = Struct.new(:minor_version, :status, :msg, :headers, :body)
 
@@ -28,63 +29,43 @@ class HttpsClient
     @phr = Phr.new
   end
 
-  def get(url, headers = nil)
-    buf = make_request(GET, url, headers)
-    buf << CRLF
-
-    @tls_client.connect(url.host, url.port)
-    @tls_client.write(buf)
-
-    response, pret, buf = read_response(&block)
-
-    return pret unless response # parser error
-
-    read_body(response, pret, buf, &block)
-
-    self
-  ensure
-    cleanup
+  def get(url, headers = nil, &block)
+    do_request GET, url, headers, nil, false, true, &block
   end
 
-  def head(url, headers = nil)
-    buf = make_request(HEAD, url, headers)
-    buf << CRLF
-
-    @tls_client.connect(url.host, url.port)
-    @tls_client.write(buf)
-
-    response, pret, buf = read_response(&block)
-
-    return pret unless response # parser error
-
-    self
-  ensure
-    cleanup
+  def head(url, headers = nil, &block)
+    do_request HEAD, url, headers, nil, false, false, &block
   end
 
-  def post(url, body, headers = nil)
-    buf = make_request(POST, url, headers)
-
-    @tls_client.connect(url.host, url.port)
-    @tls_client.write(buf)
-
-    send_body(body)
-
-    response, pret, buf = read_response(&block)
-
-    return pret unless response # parser error
-
-    read_body(response, pret, buf, &block)
-
-    self
-  ensure
-    cleanup
+  def post(url, body, headers = nil, &block)
+    do_request POST, url, headers, body, true, true, &block
   end
 
   def cleanup
     @phr.reset
     @tls_client.close
   rescue
+  end
+
+  def do_request(method, url, headers, body, request_body, response_body, &block)
+    url = URL.parse(url)
+
+    buf = make_request(method, url, headers)
+
+    @tls_client.connect(url.host, url.port)
+    @tls_client.write(buf)
+
+    send_body(body) if request_body
+
+    response, pret, buf = read_response(&block)
+
+    return pret unless response # parser error
+
+    read_body(response, pret, buf, &block) if response_body
+
+    self
+  ensure
+    cleanup
   end
 
   def read_body(response, pret, buf)
@@ -179,8 +160,6 @@ class HttpsClient
   end
 
   def make_request(method, url, headers)
-    url = URL.parse(url)
-
     buf = "#{method}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}"
 
     if headers
