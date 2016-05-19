@@ -13,9 +13,12 @@ class HttpsClient
   TRAILER_DC = TRAILER.downcase
   FINAL_CHUNK = "0#{CRLF}#{CRLF}"
 
-  GET  = 'GET '
-  HEAD = 'HEAD '
-  POST = 'POST '
+  DELETE = 'DELETE '
+  GET    = 'GET '
+  HEAD   = 'HEAD '
+  PATCH  = 'PATCH '
+  POST   = 'POST '
+  PUT    = 'PUT '
 
   Response = Struct.new(:minor_version, :status, :msg, :headers, :body)
 
@@ -29,6 +32,10 @@ class HttpsClient
     @phr = Phr.new
   end
 
+  def delete(url, headers = nil, &block)
+    do_request DELETE, url, headers, nil, false, true, &block
+  end
+
   def get(url, headers = nil, &block)
     do_request GET, url, headers, nil, false, true, &block
   end
@@ -37,8 +44,16 @@ class HttpsClient
     do_request HEAD, url, headers, nil, false, false, &block
   end
 
+  def patch(url, body, headers = nil, &block)
+    do_request PATCH, url, headers, body, true, true, &block
+  end
+
   def post(url, body, headers = nil, &block)
     do_request POST, url, headers, body, true, true, &block
+  end
+
+  def put(url, body, headers = nil, &block)
+    do_request PUT, url, headers, body, true, true, &block
   end
 
   def cleanup
