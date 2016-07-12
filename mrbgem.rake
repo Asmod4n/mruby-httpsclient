@@ -5,4 +5,7 @@
 
   spec.add_dependency 'mruby-tls'
   spec.add_dependency 'mruby-phr'
+  spec.add_dependency 'mruby-uri-parser'
+  spec.add_dependency 'mruby-fiber'
+  spec.add_dependency 'mruby-struct'
 end

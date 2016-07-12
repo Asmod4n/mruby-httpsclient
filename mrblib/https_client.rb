@@ -63,11 +63,12 @@ class HttpsClient
   end
 
   def do_request(method, url, headers, body, request_body, response_body, &block)
-    url = URL.parse(url)
+    url = URI.parse(url)
+    raise ArgumentError, "not a https URL" unless url.scheme == 'https'
 
     buf = make_request(method, url, headers)
 
-    @tls_client.connect(url.host, url.port)
+    @tls_client.connect(url.host, String(url.port))
     @tls_client.write(buf)
 
     if request_body then
