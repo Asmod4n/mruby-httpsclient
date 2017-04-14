@@ -59,6 +59,7 @@ class HttpsClient
   def cleanup
     @phr.reset
     @tls_client.close
+    @tls_client.reset
   rescue
   end
 
@@ -105,7 +106,7 @@ class HttpsClient
       unless headers.key? TRAILER_DC
         @phr.consume_trailer = true
       end
-      loop do
+      while true
         pret = @phr.decode_chunked(response.body)
         case pret
         when Fixnum
@@ -120,7 +121,7 @@ class HttpsClient
       end
     else
       yield response
-      loop do
+      while true
         response.body = @tls_client.read(32_768)
         yield response
       end
@@ -132,7 +133,7 @@ class HttpsClient
     pret = nil
     response = nil
 
-    loop do
+    while true
       pret = @phr.parse_response(buf)
       case pret
       when Fixnum
@@ -183,8 +184,8 @@ class HttpsClient
     buf = "#{method}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}"
 
     if headers
-      headers.each do |kv|
-        buf << "#{kv[0]}#{KV_DELI}#{kv[1]}#{CRLF}"
+      headers.each do |k, v|
+        buf << "#{k}#{KV_DELI}#{v}#{CRLF}"
       end
     else
       buf << "#{CON_CL}#{CRLF}"

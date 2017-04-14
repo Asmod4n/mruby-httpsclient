@@ -2,18 +2,12 @@
 
 Prerequirements
 ===============
-You need mruby-tls which needs libressl somewhere your compiler can find it, for example on OS X with homebrew you have to add something like this to build_config.rb
+You need mruby-tls which needs libressl (http://www.libressl.org) somewhere your compiler can find it, for example on OS X with homebrew you have to add something like this to build_config.rb
 ```ruby
   conf.gem mgem: 'mruby-tls' do |g|
     g.cc.include_paths << '/usr/local/opt/libressl/include'
     g.linker.library_paths << '/usr/local/opt/libressl/lib'
   end
-```
-
-You also need mruby-phr:
-build_config.rb
-```ruby
-  conf.gem github: 'Asmod4n/mruby-phr'
 ```
 
 Example
