@@ -1,24 +1,28 @@
 class HttpsClient
-  HTTP_1_1 = ' HTTP/1.1'
-  CRLF = "\r\n"
-  HOST = 'Host: '
-  CON_CL = 'Connection: close'
-  KV_DELI = ': '
-  CONTENT_LENGTH = 'Content-Length'
-  CONTENT_LENGTH_DC = CONTENT_LENGTH.downcase
-  TRANSFER_ENCODING = 'Transfer-Encoding'
-  TRANSFER_ENCODING_DC = TRANSFER_ENCODING.downcase
-  CHUNKED = 'chunked'
-  TRAILER = 'Trailer'
-  TRAILER_DC = TRAILER.downcase
-  FINAL_CHUNK = "0#{CRLF}#{CRLF}"
+  HTTP_1_1 = ' HTTP/1.1'.freeze
+  CRLF = "\r\n".freeze
+  HOST = 'Host: '.freeze
+  CON_CL = 'Connection: close'.freeze
+  KV_DELI = ': '.freeze
+  CONTENT_LENGTH = 'Content-Length'.freeze
+  CONTENT_LENGTH_DC = CONTENT_LENGTH.downcase.freeze
+  TRANSFER_ENCODING = 'Transfer-Encoding'.freeze
+  TRANSFER_ENCODING_DC = TRANSFER_ENCODING.downcase.freeze
+  CHUNKED = 'chunked'.freeze
+  TRAILER = 'Trailer'.freeze
+  TRAILER_DC = TRAILER.downcase.freeze
+  FINAL_CHUNK = "0#{CRLF}#{CRLF}".freeze
 
-  DELETE = 'DELETE '
-  GET    = 'GET '
-  HEAD   = 'HEAD '
-  PATCH  = 'PATCH '
-  POST   = 'POST '
-  PUT    = 'PUT '
+  DELETE = 'DELETE '.freeze
+  GET    = 'GET '.freeze
+  HEAD   = 'HEAD '.freeze
+  PATCH  = 'PATCH '.freeze
+  POST   = 'POST '.freeze
+  PUT    = 'PUT '.freeze
+
+  RFC_1123_FORMAT = '%a, %d %b %Y %T GMT'.freeze
+  VERSION = '0.1.0'
+  USER_AGENT = "User-Agent: mruby-httpsclient/#{VERSION}#{CRLF}"
 
   Response = Struct.new(:minor_version, :status, :msg, :headers, :body)
 
@@ -72,7 +76,7 @@ class HttpsClient
     @tls_client.connect(url.host, String(url.port))
     @tls_client.write(buf)
 
-    if request_body then
+    if request_body
       send_body(body)
     else
       @tls_client.write CRLF
@@ -80,7 +84,7 @@ class HttpsClient
 
     response, pret, buf = read_response(&block)
 
-    return pret unless response # parser error
+    return response if response == :parser_error # parser error
 
     read_body(response, pret, buf, &block) if response_body
 
@@ -154,9 +158,7 @@ class HttpsClient
   def send_body(body)
     case body
     when String
-      buf = "#{CONTENT_LENGTH}#{KV_DELI}#{body.bytesize}#{CRLF}#{CRLF}"
-      @tls_client.write(buf)
-      @tls_client.write(body)
+      @tls_client.write("#{CONTENT_LENGTH}#{KV_DELI}#{body.bytesize}#{CRLF}#{CRLF}#{body}")
     when Enumerable
       buf = "#{TRANSFER_ENCODING}#{KV_DELI}#{CHUNKED}#{CRLF}#{CRLF}"
       @tls_client.write(buf)
@@ -181,7 +183,7 @@ class HttpsClient
   end
 
   def make_request(method, url, headers)
-    buf = "#{method}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}"
+    buf = "#{method}#{url.path}#{HTTP_1_1}#{CRLF}#{HOST}#{url.host}#{CRLF}#{USER_AGENT}Date: #{Time.now.getgm.strftime(RFC_1123_FORMAT)}#{CRLF}"
 
     if headers
       headers.each do |k, v|

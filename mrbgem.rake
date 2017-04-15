@@ -8,4 +8,5 @@
   spec.add_dependency 'mruby-uri-parser'
   spec.add_dependency 'mruby-fiber'
   spec.add_dependency 'mruby-struct'
+  spec.add_dependency 'mruby-time-strftime'
 end
